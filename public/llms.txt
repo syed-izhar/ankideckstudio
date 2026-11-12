@@ -1,0 +1,22 @@
+# AnkiDeckStudio
+
+> 100% Client-Side Anki .APKG Viewer, WebP Media Compressor, PDF Study Guide Generator, and CSV/Quizlet Exporter running entirely in the browser via WebAssembly (sql.js) and Zstandard (fzstd). No file size limits, zero server uploads, complete privacy.
+
+## Overview
+AnkiDeckStudio (https://ankideckstudio.pages.dev) is an open-access web application for medical students, language learners, and educators who study with Anki flashcards (.apkg and .colpkg archives). Unlike cloud file converters that upload files to remote servers and impose 100MB–150MB upload caps, AnkiDeckStudio executes all SQLite database querying, decompression, image optimization, and document rendering locally inside the client's browser RAM using WebAssembly.
+
+## Primary Tools & URLs
+
+- [Anki .APKG Viewer Online](https://ankideckstudio.pages.dev/apkg-viewer): Inspect, search, filter, and study flashcards without installing Anki desktop. Full support for modern Anki 23.10+ and Anki 24+ Zstandard (.anki21b) databases, legacy Schema 11/18 archives, interactive Cloze deletions, inline image diagrams, and HTML5 audio tags.
+- [Anki Deck Media Compressor](https://ankideckstudio.pages.dev/anki-deck-compressor): Compress uncompressed PNG and high-bitrate JPEG images in .apkg packages into lightweight WebP format using HTML5 Canvas. Shrinks deck size by 70–85% for instantaneous mobile sync without perceptible loss of visual clarity. Automatically rewrites database note references.
+- [Anki to PDF Study Guide Converter](https://ankideckstudio.pages.dev/apkg-to-pdf): Export digital flashcards into clean, printable A4/Letter PDF study guides and two-column fill-in-the-blank worksheets (Blank Cloze mode) with high-resolution inline images, custom font sizing, and page-break protection.
+- [Anki to CSV, Excel & Quizlet Exporter](https://ankideckstudio.pages.dev/apkg-to-csv-quizlet): Convert .apkg decks into clean CSV, Excel-compatible delimiters, JSON structured arrays, or one-click Tab-delimited format for instant copy-paste import into Quizlet. Automatically converts Cloze syntax to readable plaintext.
+
+## Key Technical Specifications
+- Database Engine: WebAssembly SQLite (sql.js) with Schema 11 (.anki2), Schema 18 (.anki21), and Schema 21 (.anki21b) parsing.
+- Decompression: Pure JavaScript Zstandard decompression (fzstd) for modern Anki archives + fflate for ZIP extraction.
+- Media Compression: Client-side HTML5 Canvas WebP encoding with configurable quality (default 80%) and max dimension downscaling.
+- Security & Privacy: 100% offline-capable client-side processing. Zero network telemetry or server uploads. Safe for proprietary patient cases, copyrighted medical curricula, and personal study archives.
+- File Size Limit: Unlimited (supports multi-gigabyte collections directly bounded only by local device RAM).
+
+For full technical documentation, see [llms-full.txt](https://ankideckstudio.pages.dev/llms-full.txt).

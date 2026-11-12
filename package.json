@@ -1,0 +1,29 @@
+{
+  "name": "ankideckstudio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Anki .APKG Viewer, Media Compressor & PDF Study Guide Converter - 100% Client-Side",
+  "scripts": {
+    "dev": "vite",
+    "generate:assets": "node scripts/generate-brand-assets.mjs",
+    "build": "node scripts/generate-brand-assets.mjs && vite build && node scripts/generate-seo-pages.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "fzstd": "^0.1.1",
+    "lucide-react": "^0.462.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "vite": "^5.4.11"
+  }
+}
