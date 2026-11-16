@@ -1,10 +1,10 @@
 export const MONETIZATION_CONFIG = {
   // Paste your $3 "Buy Me a Coffee" Gumroad product link here:
-  coffeeUrl: "https://gumroad.com/l/ankideckstudio-coffee",
+  coffeeUrl: "https://izharist7.gumroad.com/l/buymeacofee",
   coffeeSuggestedPrice: "$3",
   // Existing $5 Pro Pass Gumroad details:
-  proPassUrl: "https://gumroad.com/l/ankideckstudio-pro",
-  gumroadProductId: "YOUR_GUMROAD_PRODUCT_ID"
+  proPassUrl: "https://izharist7.gumroad.com/l/ankideckstudio-pro",
+  gumroadProductId: "mhLY7Kc7I4tYtGYeJDtk3A=="
 };
 
 export const ADSENSE_CONFIG = {

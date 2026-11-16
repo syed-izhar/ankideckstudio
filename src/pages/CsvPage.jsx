@@ -11,7 +11,7 @@ import { SEO_ROUTES } from '../config/seoConfig';
 import { clozePlainText, stripHtml } from '../services/apkgEngine';
 import {
   Table2, Download, Copy, Check, Settings, ChevronDown, ChevronUp,
-  FileJson, FileSpreadsheet, FileText, Braces
+  FileJson, FileSpreadsheet, FileText, Braces, Layers
 } from 'lucide-react';
 
 function escapeField(str, delimiter) {
@@ -104,6 +104,7 @@ export default function CsvPage() {
   const [includeTags, setIncludeTags] = useState(true);
   const [selectedDeck, setSelectedDeck] = useState('');
   const [selectedFields, setSelectedFields] = useState([]);
+  const [groupByNotes, setGroupByNotes] = useState(true);
   const [showSettings, setShowSettings] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -124,14 +125,31 @@ export default function CsvPage() {
     return deckData.cards;
   }, [deckData, selectedDeck]);
 
+  const uniqueCardsCount = useMemo(() => {
+    const seen = new Set();
+    filteredCards.forEach(c => seen.add(c.noteId || c.nid));
+    return seen.size;
+  }, [filteredCards]);
+
+  const cardsToExport = useMemo(() => {
+    if (!groupByNotes) return filteredCards;
+    const seen = new Set();
+    return filteredCards.filter(card => {
+      const id = card.noteId || card.nid;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [filteredCards, groupByNotes]);
+
   const previewRows = useMemo(() => {
-    if (filteredCards.length === 0) return [];
-    return buildRows(filteredCards.slice(0, 5), options);
-  }, [filteredCards, options]);
+    if (cardsToExport.length === 0) return [];
+    return buildRows(cardsToExport.slice(0, 5), options);
+  }, [cardsToExport, options]);
 
   const previewHeaders = useMemo(() => {
-    if (!deckData || filteredCards.length === 0) return [];
-    const sampleCard = filteredCards[0];
+    if (!deckData || cardsToExport.length === 0) return [];
+    const sampleCard = cardsToExport[0];
     const fields = selectedFields.length > 0
       ? selectedFields
       : sampleCard.fields.map(f => f.name);
@@ -139,7 +157,7 @@ export default function CsvPage() {
     if (includeDeck) h.push('Deck');
     if (includeTags) h.push('Tags');
     return h;
-  }, [deckData, filteredCards, selectedFields, includeDeck, includeTags]);
+  }, [deckData, cardsToExport, selectedFields, includeDeck, includeTags]);
 
   // All available field names across all note types
   const allFieldNames = useMemo(() => {
@@ -158,7 +176,7 @@ export default function CsvPage() {
   };
 
   const handleCopyQuizlet = () => {
-    const content = buildQuizlet(filteredCards, options);
+    const content = buildQuizlet(cardsToExport, options);
     navigator.clipboard.writeText(content).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -215,6 +233,10 @@ export default function CsvPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
                   <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-800">
+                      <input type="checkbox" checked={groupByNotes} onChange={e => setGroupByNotes(e.target.checked)} className="accent-brand-600" />
+                      <span className="text-sm">Group by Unique Notes ({uniqueCardsCount})</span>
+                    </label>
                     {[
                       { val: stripTagsHtml, setter: setStripTagsHtml, label: 'Strip HTML tags' },
                       { val: clozeToPlain, setter: setClozeToPlain, label: 'Cloze to plain text' },
@@ -263,7 +285,7 @@ export default function CsvPage() {
           {/* Export Buttons */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <button
-              onClick={() => downloadFile(buildCsv(filteredCards, options), `${baseName}.csv`, 'text/csv')}
+              onClick={() => downloadFile(buildCsv(cardsToExport, options), `${baseName}.csv`, 'text/csv')}
               className="btn-primary flex-col py-4 h-auto"
             >
               <FileSpreadsheet className="w-6 h-6 mb-1" />
@@ -271,20 +293,20 @@ export default function CsvPage() {
               <span className="text-xs font-normal opacity-80">Excel / Google Sheets</span>
             </button>
             <button
-              onClick={() => downloadFile(buildCsv(filteredCards, { ...options, delimiter: '\t' }), `${baseName}.tsv`, 'text/tab-separated-values')}
-              className="btn-secondary flex-col py-4 h-auto"
+              onClick={() => downloadFile(buildCsv(cardsToExport, { ...options, delimiter: '\t' }), `${baseName}.tsv`, 'text/tab-separated-values')}
+              className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-semibold shadow-sm rounded-lg flex flex-col items-center justify-center py-4 h-auto transition-colors duration-150"
             >
-              <FileText className="w-6 h-6 mb-1 text-gray-600" />
-              <span>.TSV</span>
-              <span className="text-xs font-normal opacity-70">Tab-separated</span>
+              <FileText className="w-6 h-6 mb-1 text-slate-700" />
+              <span className="text-slate-800 font-semibold">.TSV</span>
+              <span className="text-xs font-normal text-slate-500">Tab-separated</span>
             </button>
             <button
-              onClick={() => downloadFile(buildJson(filteredCards, options), `${baseName}.json`, 'application/json')}
-              className="btn-secondary flex-col py-4 h-auto"
+              onClick={() => downloadFile(buildJson(cardsToExport, options), `${baseName}.json`, 'application/json')}
+              className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-semibold shadow-sm rounded-lg flex flex-col items-center justify-center py-4 h-auto transition-colors duration-150"
             >
-              <Braces className="w-6 h-6 mb-1 text-gray-600" />
-              <span>.JSON</span>
-              <span className="text-xs font-normal opacity-70">Structured data</span>
+              <Braces className="w-6 h-6 mb-1 text-slate-700" />
+              <span className="text-slate-800 font-semibold">.JSON</span>
+              <span className="text-xs font-normal text-slate-500">Structured data</span>
             </button>
             <button
               onClick={handleCopyQuizlet}
@@ -298,9 +320,21 @@ export default function CsvPage() {
 
           {/* Preview Table */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
-              <Table2 className="w-4 h-4 text-gray-500" />
-              <span className="font-semibold text-sm text-gray-700">Preview (first 5 rows of {filteredCards.length.toLocaleString()})</span>
+            <div className="px-4 py-3 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Table2 className="w-4 h-4 text-gray-500" />
+                <span className="font-semibold text-sm text-gray-700">
+                  Preview (first 5 rows of {cardsToExport.length.toLocaleString()} {groupByNotes ? 'unique notes' : 'cards'})
+                </span>
+              </div>
+              <button
+                onClick={() => setGroupByNotes(!groupByNotes)}
+                className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-colors self-start sm:self-auto ${groupByNotes ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 shadow-sm'}`}
+                title="Toggle unique notes vs all sibling cards"
+              >
+                <Layers className="w-3 h-3 inline mr-1" />
+                {groupByNotes ? `Group by Unique Notes (${uniqueCardsCount})` : `All Sibling Cards (${filteredCards.length})`}
+              </button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">

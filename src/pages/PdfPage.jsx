@@ -9,7 +9,7 @@ import GeoComparisonTable from '../components/GeoComparisonTable';
 import FaqSection from '../components/FaqSection';
 import { SEO_ROUTES } from '../config/seoConfig';
 import { renderCardHtml, clozeBlankText, clozePlainText, stripHtml } from '../services/apkgEngine';
-import { FileText, Download, Settings, Eye, EyeOff, Crown, Printer, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Download, Settings, Eye, EyeOff, Crown, Printer, ChevronDown, ChevronUp, Layers } from 'lucide-react';
 
 const FREE_CARD_LIMIT = 50;
 
@@ -88,22 +88,61 @@ export default function PdfPage() {
   const [clozeMode, setClozeMode] = useState('raw');
   const [fontSize, setFontSize] = useState(14);
   const [selectedDeck, setSelectedDeck] = useState('');
+  const [groupByNotes, setGroupByNotes] = useState(true);
   const [showSettings, setShowSettings] = useState(true);
   const printRef = useRef(null);
 
+  const cards = deckData?.cards || [];
+
   const cardsToShow = useMemo(() => {
-    if (!deckData) return [];
-    let cards = deckData.cards;
-    if (selectedDeck) cards = cards.filter(c => c.deckName.startsWith(selectedDeck));
-    return cards;
+    if (!deckData || !deckData.cards) return [];
+    let list = deckData.cards;
+    if (selectedDeck) list = list.filter(c => c.deckName.startsWith(selectedDeck));
+    return list;
   }, [deckData, selectedDeck]);
 
-  const freeCards = cardsToShow.slice(0, FREE_CARD_LIMIT);
-  const needsPro = cardsToShow.length > FREE_CARD_LIMIT && !isProUnlocked;
-  const displayCards = isProUnlocked ? cardsToShow : freeCards;
+  const uniqueCardsCount = useMemo(() => {
+    const seen = new Set();
+    cardsToShow.forEach(c => seen.add(c.noteId || c.nid));
+    return seen.size;
+  }, [cardsToShow]);
+
+  const processedCards = useMemo(() => {
+    if (!groupByNotes) return cardsToShow;
+    const seen = new Set();
+    return cardsToShow.filter(card => {
+      const id = card.noteId || card.nid;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [cardsToShow, groupByNotes]);
+
+  // Determine Pro status from context or localStorage flag
+  const isPro = useMemo(() => {
+    if (isProUnlocked) return true;
+    try {
+      return (
+        localStorage.getItem('ankideckstudio_pro_unlocked') === 'true' ||
+        localStorage.getItem('ankideckstudio_pro') === 'true'
+      );
+    } catch {
+      return false;
+    }
+  }, [isProUnlocked]);
+
+  // Evaluate raw loaded cards count (e.g. 75 cards in sample deck) against free card limit
+  const rawCardsCount = cards.length || cardsToShow.length;
+  const needsPro = rawCardsCount > FREE_CARD_LIMIT && !isPro;
+
+  const freeCards = processedCards.slice(0, FREE_CARD_LIMIT);
+  const displayCards = isPro ? processedCards : freeCards;
 
   const handlePrint = useCallback(() => {
-    if (needsPro) { setShowProModal(true); return; }
+    if (needsPro) {
+      setShowProModal(true);
+      return;
+    }
     window.print();
   }, [needsPro, setShowProModal]);
 
@@ -145,7 +184,7 @@ export default function PdfPage() {
                     <div className="flex gap-2">
                       {[{ val: 'detailed', label: 'Detailed' }, { val: 'compact', label: 'Compact' }].map(opt => (
                         <button key={opt.val} onClick={() => setLayout(opt.val)}
-                          className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-colors ${layout === opt.val ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-700 border-gray-300 hover:border-brand-400'}`}>
+                          className={`flex-1 py-2 rounded-lg text-sm font-semibold border transition-colors ${layout === opt.val ? 'bg-brand-600 text-white border-brand-600 shadow-sm' : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 font-semibold shadow-sm'}`}>
                           {opt.label}
                         </button>
                       ))}
@@ -171,6 +210,10 @@ export default function PdfPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">Font Size: {fontSize}px</label>
                       <input type="range" min="10" max="18" value={fontSize} onChange={e => setFontSize(Number(e.target.value))} className="w-full accent-brand-600" />
                     </div>
+                    <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-800">
+                      <input type="checkbox" checked={groupByNotes} onChange={e => setGroupByNotes(e.target.checked)} className="accent-brand-600" />
+                      <span className="text-sm">Group by Unique Notes ({uniqueCardsCount})</span>
+                    </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={showImages} onChange={e => setShowImages(e.target.checked)} className="accent-brand-600" />
                       <span className="text-sm text-gray-700">Include images</span>
@@ -189,28 +232,74 @@ export default function PdfPage() {
               )}
             </div>
 
+            {/* Amber Paywall Banner when cards exceed FREE_CARD_LIMIT */}
+            {needsPro && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-5 mb-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5 text-left">
+                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                      <Crown className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-base font-bold text-amber-900">
+                        Free Limit Reached ({rawCardsCount} / {FREE_CARD_LIMIT} cards)
+                      </p>
+                      <p className="text-amber-700 text-sm mt-0.5">
+                        Upgrade to the $5 Pro Pass to export and print unlimited cards.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowProModal(true)}
+                    className="btn-primary bg-amber-500 hover:bg-amber-600 border-amber-500 text-white font-bold px-5 py-2.5 rounded-lg shrink-0 shadow-sm inline-flex items-center gap-2 transition-colors"
+                  >
+                    <Crown className="w-4 h-4 text-white" />
+                    Unlock Pro ($5)
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Action bar */}
-            <div className="flex items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-4 mb-6">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-gray-200 rounded-xl px-5 py-4 mb-6 gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
                 <FileText className="w-5 h-5 text-brand-500" />
                 <span className="text-sm font-medium text-gray-700">
-                  Showing {displayCards.length} of {cardsToShow.length} cards
+                  Showing {displayCards.length} of {processedCards.length} {groupByNotes ? 'unique notes' : 'cards'} ({rawCardsCount} total cards)
                 </span>
+                <button
+                  type="button"
+                  onClick={() => setGroupByNotes(!groupByNotes)}
+                  className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-colors ${groupByNotes ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 shadow-sm'}`}
+                  title="Toggle unique notes vs sibling cloze cards"
+                >
+                  <Layers className="w-3 h-3 inline mr-1" />
+                  {groupByNotes ? `Group by Unique Notes (${uniqueCardsCount})` : `All Sibling Cards (${cardsToShow.length})`}
+                </button>
                 {needsPro && (
                   <span className="badge bg-amber-100 text-amber-800">
-                    <Crown className="w-3 h-3 mr-1" /> Pro for full deck
+                    <Crown className="w-3 h-3 mr-1" /> Pro for full deck ({rawCardsCount} cards)
                   </span>
                 )}
               </div>
-              <button onClick={handlePrint} className={needsPro ? 'btn-secondary' : 'btn-primary'}>
-                {needsPro ? <Crown className="w-4 h-4" /> : <Printer className="w-4 h-4" />}
-                {needsPro ? `Unlock Full Deck — $5 Pro` : 'Print / Save as PDF'}
+              <button
+                type="button"
+                onClick={handlePrint}
+                className={needsPro ? 'btn-primary bg-amber-500 hover:bg-amber-600 border-amber-500 text-white font-bold px-5 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 transition-colors shadow-sm' : 'btn-primary'}
+              >
+                {needsPro ? <Crown className="w-4 h-4 text-white" /> : <Printer className="w-4 h-4" />}
+                {needsPro ? 'Unlock Pro ($5)' : 'Print / Save as PDF'}
               </button>
             </div>
           </div>
 
           {/* Printable content */}
-          <div ref={printRef} style={{ fontSize: `${fontSize}px` }}>
+          <div
+            ref={printRef}
+            style={{ fontSize: `${fontSize}px` }}
+            className="pdf-preview-container max-h-[750px] overflow-y-auto border border-slate-200 rounded-xl p-4 bg-slate-50/50 shadow-inner mb-6 print:max-h-none print:overflow-visible print:border-none print:p-0 print:bg-transparent print:shadow-none print:m-0"
+          >
             {/* Print-only header */}
             <div className="hidden print:block mb-6 pb-4 border-b-2 border-gray-900">
               <h1 className="text-2xl font-bold">{deckData.allDecks[0] || 'Anki Study Guide'}</h1>
@@ -234,10 +323,10 @@ export default function PdfPage() {
             {needsPro && (
               <div className="no-print mt-6 bg-amber-50 border-2 border-dashed border-amber-300 rounded-xl p-8 text-center">
                 <Crown className="w-10 h-10 text-amber-500 mx-auto mb-3" />
-                <p className="text-lg font-bold text-amber-900">{cardsToShow.length - FREE_CARD_LIMIT} more cards require Pro Pass</p>
-                <p className="text-amber-700 text-sm mt-1 mb-4">Unlock unlimited PDF export for all {cardsToShow.length} cards with a one-time $5 payment.</p>
-                <button onClick={() => setShowProModal(true)} className="btn-primary bg-amber-500 hover:bg-amber-600 border-amber-500">
-                  <Crown className="w-4 h-4" /> Get Pro Pass — $5 Lifetime
+                <p className="text-lg font-bold text-amber-900">{rawCardsCount - FREE_CARD_LIMIT} more cards require Pro Pass</p>
+                <p className="text-amber-700 text-sm mt-1 mb-4">Unlock unlimited PDF export for all {rawCardsCount} cards with a one-time $5 payment.</p>
+                <button type="button" onClick={() => setShowProModal(true)} className="btn-primary bg-amber-500 hover:bg-amber-600 border-amber-500">
+                  <Crown className="w-4 h-4" /> Unlock Pro ($5)
                 </button>
               </div>
             )}

@@ -260,6 +260,14 @@ function canvasToUint8Array(canvas) {
   });
 }
 
+export const SAMPLE_DECK_METADATA = {
+  dbSource: 'collection.anki21b',
+  schema: 'ANKI21B (Zstd)',
+  schemaBadge: 'ANKI21B (Zstd)',
+  schemaName: 'Modern Anki Schema',
+  version: 'Anki 24+ Zstandard'
+};
+
 export async function generateSampleDeck() {
   const SQL = await initSqlJs({
     locateFile: (file) => {

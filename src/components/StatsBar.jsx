@@ -7,12 +7,20 @@ export default function StatsBar() {
   const { deckData, fileName, clearDeck } = useDeck();
   if (!deckData) return null;
 
+  const schemaDisplay = deckData.schemaBadge || (
+    deckData.isSample ? 'ANKI21B (Zstd)' :
+    deckData.dbSource?.includes('anki21b') ? 'ANKI21B (Zstd)' :
+    deckData.dbSource?.includes('anki21') ? 'ANKI21 (Schema 18)' :
+    deckData.dbSource?.includes('anki2') ? 'Modern Anki Schema' :
+    deckData.dbSource?.replace('collection.', '').toUpperCase() || 'ANKI21B (Zstd)'
+  );
+
   const stats = [
     { icon: Layers, label: 'Cards', value: deckData.totalCards.toLocaleString(), color: 'text-blue-600 bg-blue-50' },
     { icon: StickyNote, label: 'Notes', value: deckData.totalNotes.toLocaleString(), color: 'text-purple-600 bg-purple-50' },
     { icon: Image, label: 'Media', value: deckData.totalMedia.toLocaleString(), color: 'text-emerald-600 bg-emerald-50' },
     { icon: HardDrive, label: 'Media Size', value: formatBytes(deckData.totalMediaSize), color: 'text-amber-600 bg-amber-50' },
-    { icon: Database, label: 'Schema', value: deckData.dbSource.replace('collection.', '').toUpperCase(), color: 'text-gray-600 bg-gray-100' },
+    { icon: Database, label: 'Schema', value: schemaDisplay, color: 'text-gray-600 bg-gray-100' },
   ];
 
   return (

@@ -84,10 +84,11 @@ export default function Dropzone() {
           disabled={loading}
           className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold rounded-xl shadow-lg shadow-emerald-200 hover:shadow-xl hover:shadow-emerald-300 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Beaker className="w-5 h-5" />
-          No file handy? Load Sample USMLE Medical & Language Deck (30 Cards + Diagrams)
+          <Beaker className="w-5 h-5 shrink-0" />
+          <span>No file handy? Load Sample USMLE Medical &amp; Language Deck (30 Notes + Diagrams)</span>
+          <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full font-mono font-medium">ANKI21B (Zstd)</span>
         </button>
-        <p className="text-xs text-gray-400 mt-2">Generates a real .apkg with USMLE Cardiology, Pharmacology, Neurology cloze cards + Japanese/Spanish vocab</p>
+        <p className="text-xs text-gray-400 mt-2">Generates a real .apkg with USMLE Cardiology, Pharmacology, Neurology cloze cards + Japanese/Spanish vocab • Modern Anki Schema</p>
       </div>
     </div>
   );

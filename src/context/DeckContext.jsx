@@ -11,7 +11,14 @@ export function DeckProvider({ children }) {
   const [progress, setProgress] = useState('');
   const [fileName, setFileName] = useState('');
   const [isProUnlocked, setIsProUnlocked] = useState(() => {
-    try { return localStorage.getItem('ankideckstudio_pro') === 'true'; } catch { return false; }
+    try {
+      return (
+        localStorage.getItem('ankideckstudio_pro_unlocked') === 'true' ||
+        localStorage.getItem('ankideckstudio_pro') === 'true'
+      );
+    } catch {
+      return false;
+    }
   });
   const [showProModal, setShowProModal] = useState(false);
   const fileInputRef = useRef(null);
@@ -46,6 +53,9 @@ export function DeckProvider({ children }) {
       const blob = await generateSampleDeck();
       const buffer = await blob.arrayBuffer();
       const data = await parseApkg(buffer, setProgress);
+      data.isSample = true;
+      data.dbSource = 'collection.anki21b';
+      data.schemaBadge = 'ANKI21B (Zstd)';
       setDeckData(data);
       setProgress('');
     } catch (err) {
@@ -71,7 +81,10 @@ export function DeckProvider({ children }) {
 
   const unlockPro = useCallback((key) => {
     setIsProUnlocked(true);
-    try { localStorage.setItem('ankideckstudio_pro', 'true'); } catch {}
+    try {
+      localStorage.setItem('ankideckstudio_pro_unlocked', 'true');
+      localStorage.setItem('ankideckstudio_pro', 'true');
+    } catch {}
     setShowProModal(false);
   }, []);
 

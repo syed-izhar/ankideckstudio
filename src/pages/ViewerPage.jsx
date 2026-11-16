@@ -11,10 +11,10 @@ import { SEO_ROUTES } from '../config/seoConfig';
 import { renderCardHtml, stripHtml } from '../services/apkgEngine';
 import {
   Search, Filter, ChevronLeft, ChevronRight, Eye, EyeOff,
-  Tag, FolderTree, RotateCcw, ChevronDown, ChevronUp, X, BookOpen
+  Tag, FolderTree, RotateCcw, ChevronDown, ChevronUp, X, BookOpen, Layers
 } from 'lucide-react';
 
-const CARDS_PER_PAGE = 100;
+const CARDS_PER_PAGE = 20;
 
 function FlashcardModal({ card, mediaFiles, showCloze, onClose }) {
   const [flipped, setFlipped] = useState(false);
@@ -54,12 +54,13 @@ export default function ViewerPage() {
   const [selectedDeck, setSelectedDeck] = useState('');
   const [selectedTag, setSelectedTag] = useState('');
   const [showCloze, setShowCloze] = useState(true);
+  const [groupByNotes, setGroupByNotes] = useState(true);
   const [page, setPage] = useState(1);
   const [expandedCard, setExpandedCard] = useState(null);
   const [studyCard, setStudyCard] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => { setPage(1); }, [search, selectedDeck, selectedTag]);
+  useEffect(() => { setPage(1); }, [search, selectedDeck, selectedTag, groupByNotes]);
 
   const filteredCards = useMemo(() => {
     if (!deckData) return [];
@@ -75,8 +76,25 @@ export default function ViewerPage() {
     });
   }, [deckData, search, selectedDeck, selectedTag]);
 
-  const totalPages = Math.ceil(filteredCards.length / CARDS_PER_PAGE);
-  const pageCards = filteredCards.slice((page - 1) * CARDS_PER_PAGE, page * CARDS_PER_PAGE);
+  const uniqueNoteCount = useMemo(() => {
+    const seen = new Set();
+    filteredCards.forEach(c => seen.add(c.noteId || c.nid));
+    return seen.size;
+  }, [filteredCards]);
+
+  const displayCards = useMemo(() => {
+    if (!groupByNotes) return filteredCards;
+    const seen = new Set();
+    return filteredCards.filter(card => {
+      const id = card.noteId || card.nid;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [filteredCards, groupByNotes]);
+
+  const totalPages = Math.max(1, Math.ceil(displayCards.length / CARDS_PER_PAGE));
+  const pageCards = displayCards.slice((page - 1) * CARDS_PER_PAGE, page * CARDS_PER_PAGE);
 
   const deckTree = useMemo(() => {
     if (!deckData) return [];
@@ -111,6 +129,14 @@ export default function ViewerPage() {
               {search && <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><X className="w-4 h-4" /></button>}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => { setGroupByNotes(!groupByNotes); setPage(1); }}
+                className={`btn-secondary text-xs py-2 ${groupByNotes ? 'bg-brand-50 border-brand-300 text-brand-700 font-semibold' : ''}`}
+                title="Toggle grouping by unique notes vs sibling cloze cards"
+              >
+                <Layers className="w-3.5 h-3.5" />
+                {groupByNotes ? `Group by Unique Notes (${uniqueNoteCount})` : `All Sibling Cards (${filteredCards.length})`}
+              </button>
               <button onClick={() => setShowFilters(!showFilters)} className={`btn-secondary text-xs py-2 ${showFilters ? 'bg-brand-50 border-brand-300 text-brand-700' : ''}`}>
                 <Filter className="w-3.5 h-3.5" /> Filters
                 {(selectedDeck || selectedTag) && <span className="ml-1 w-5 h-5 bg-brand-600 text-white rounded-full text-[10px] flex items-center justify-center">{(selectedDeck ? 1 : 0) + (selectedTag ? 1 : 0)}</span>}
@@ -119,7 +145,9 @@ export default function ViewerPage() {
                 {showCloze ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                 {showCloze ? 'Cloze Visible' : 'Cloze Hidden'}
               </button>
-              <span className="text-xs text-gray-500">{filteredCards.length.toLocaleString()} / {deckData.totalCards.toLocaleString()} cards</span>
+              <span className="text-xs text-gray-500">
+                {displayCards.length.toLocaleString()} {groupByNotes ? 'unique notes' : 'sibling cards'} (of {deckData.totalCards.toLocaleString()} cards)
+              </span>
             </div>
           </div>
 
@@ -161,7 +189,7 @@ export default function ViewerPage() {
           )}
 
           {/* Card Table */}
-          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm mb-6">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -230,17 +258,25 @@ export default function ViewerPage() {
                 </tbody>
               </table>
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary text-xs py-1.5">
-                  <ChevronLeft className="w-4 h-4" /> Previous
-                </button>
-                <span className="text-sm text-gray-600">Page <strong>{page}</strong> of <strong>{totalPages}</strong></span>
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="btn-secondary text-xs py-1.5">
-                  Next <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="btn-secondary text-xs py-1.5 disabled:opacity-40"
+              >
+                <ChevronLeft className="w-4 h-4" /> Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="btn-secondary text-xs py-1.5 disabled:opacity-40"
+              >
+                Next <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <CoffeeSupport
